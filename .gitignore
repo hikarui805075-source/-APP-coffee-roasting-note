@@ -1,0 +1,36 @@
+# エディタ設定
+.vscode/
+.idea/
+*.swp
+*.swo
+*~
+
+# Google Apps Script関連（PWAでは不使用）
+Code.gs
+
+# 古いファイル
+app.js
+new
+
+# システムファイル
+.DS_Store
+Thumbs.db
+desktop.ini
+
+# ログファイル
+*.log
+
+# 一時ファイル
+*.tmp
+*.temp
+
+# Node modules（もし将来使う場合）
+node_modules/
+
+# ビルド成果物
+dist/
+build/
+
+# 環境変数ファイル
+.env
+.env.local

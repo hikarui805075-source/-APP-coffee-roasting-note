@@ -1,0 +1,1052 @@
+<!DOCTYPE html>
+<html lang="ja" class="dark">
+
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <meta name="theme-color" content="#8b6f4e">
+    <meta name="description" content="珈琲焙煎の記録と管理アプリ">
+    <title>珈琲焙煎記録アプリ</title>
+    <link rel="manifest" href="manifest.json">
+    <link rel="apple-touch-icon" href="icon-192.png">
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script>
+        tailwind.config = {
+            darkMode: 'class',
+            theme: {
+                extend: {
+                    colors: {
+                        coffee: {
+                            50: '#f5f3f0',
+                            100: '#e8e4dd',
+                            200: '#d1c7bb',
+                            300: '#b8a793',
+                            400: '#9d866b',
+                            500: '#8b6f4e',
+                            600: '#6e5840',
+                            700: '#564436',
+                            800: '#423530',
+                            900: '#2d241f',
+                        }
+                    }
+                }
+            }
+        }
+    </script>
+    <style>
+        body {
+            background: linear-gradient(135deg, #0a0a0a 0%, #1a1410 50%, #2d2420 100%);
+            min-height: 100vh;
+        }
+
+        input[type="time"]::-webkit-calendar-picker-indicator {
+            display: none;
+        }
+
+        .glass-effect {
+            background: rgba(30, 24, 20, 0.85);
+            backdrop-filter: blur(20px);
+            border: 1px solid rgba(139, 111, 78, 0.3);
+            box-shadow: 0 8px 32px 0 rgba(0, 0, 0, 0.5);
+        }
+
+        .glass-effect-light {
+            background: rgba(45, 36, 32, 0.6);
+            backdrop-filter: blur(10px);
+            border: 1px solid rgba(139, 111, 78, 0.2);
+        }
+
+        @keyframes slide-in {
+            from {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+
+            to {
+                transform: translateX(0);
+                opacity: 1;
+            }
+        }
+
+        @keyframes slide-out {
+            from {
+                transform: translateX(0);
+                opacity: 1;
+            }
+
+            to {
+                transform: translateX(100%);
+                opacity: 0;
+            }
+        }
+
+        @keyframes pulse-glow {
+
+            0%,
+            100% {
+                box-shadow: 0 0 20px rgba(157, 134, 107, 0.3);
+            }
+
+            50% {
+                box-shadow: 0 0 30px rgba(157, 134, 107, 0.6);
+            }
+        }
+
+        .animate-slide-in {
+            animation: slide-in 0.3s ease-out;
+        }
+
+        .timer-active {
+            animation: pulse-glow 2s ease-in-out infinite;
+        }
+
+        .btn-premium {
+            position: relative;
+            overflow: hidden;
+            transition: all 0.3s ease;
+        }
+
+        .btn-premium::before {
+            content: '';
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            width: 0;
+            height: 0;
+            border-radius: 50%;
+            background: rgba(255, 255, 255, 0.1);
+            transform: translate(-50%, -50%);
+            transition: width 0.6s, height 0.6s;
+        }
+
+        .btn-premium:hover::before {
+            width: 300px;
+            height: 300px;
+        }
+
+        .btn-premium:active {
+            transform: scale(0.95);
+        }
+    </style>
+</head>
+
+<body class="text-gray-100 min-h-screen transition-colors duration-200">
+    <div class="container mx-auto px-4 py-8 max-w-2xl">
+        <!-- ヘッダー -->
+        <div class="mb-8">
+            <h1 class="text-5xl font-bold mb-3 text-coffee-300 tracking-tight"
+                style="text-shadow: 2px 2px 4px rgba(0,0,0,0.5);">珈琲焙煎記録</h1>
+            <div class="flex items-center justify-between">
+                <p class="text-sm text-coffee-400">焙煎ログを記録・管理</p>
+                <button type="button" id="darkModeToggle"
+                    class="p-2 rounded-lg glass-effect-light hover:bg-coffee-800/50 transition-all btn-premium">
+                    <svg class="w-5 h-5 text-coffee-400" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2"
+                            d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z">
+                        </path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+
+        <!-- トースト通知エリア -->
+        <div id="toastContainer" class="fixed top-4 right-4 z-50 space-y-2"></div>
+
+        <!-- 入力フォーム -->
+        <form id="roastingForm" class="space-y-6 glass-effect rounded-2xl shadow-2xl p-8">
+            <!-- 生産地 -->
+            <div>
+                <label for="origin" class="block text-sm font-medium mb-2 text-coffee-300">生産地</label>
+                <input type="text" id="origin" name="origin"
+                    class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all"
+                    placeholder="例: エチオピア">
+            </div>
+
+            <!-- 加工法 -->
+            <div>
+                <label for="process" class="block text-sm font-medium mb-2 text-coffee-300">加工法</label>
+                <select id="process" name="process"
+                    class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all">
+                    <option value="">選択してください</option>
+                    <option value="ナチュラル">ナチュラル</option>
+                    <option value="ウォッシュド">ウォッシュド</option>
+                    <option value="ハニー">ハニー</option>
+                    <option value="その他">その他</option>
+                </select>
+            </div>
+
+            <!-- 加工法（other） -->
+            <div id="customProcessContainer" class="hidden">
+                <label for="processOther" class="block text-sm font-medium mb-2 text-coffee-300">加工法（other）</label>
+                <input type="text" id="processOther" name="processOther"
+                    class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all"
+                    placeholder="加工法を入力してください（例: パルプドナチュラル）">
+            </div>
+
+            <!-- クロップ年度 -->
+            <div>
+                <label for="cropYear" class="block text-sm font-medium mb-2 text-coffee-300">クロップ年度</label>
+                <input type="text" id="cropYear" name="cropYear"
+                    class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all"
+                    placeholder="例: 2024/2025">
+            </div>
+
+            <!-- 仕入先 -->
+            <div>
+                <label for="supplier" class="block text-sm font-medium mb-2 text-coffee-300">仕入先</label>
+                <input type="text" id="supplier" name="supplier"
+                    class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all"
+                    placeholder="例: 〇〇商会">
+            </div>
+
+            <!-- 投入量 -->
+            <div>
+                <label for="beanAmount" class="block text-sm font-medium mb-2 text-coffee-300">投入量</label>
+                <input type="text" id="beanAmount" name="beanAmount"
+                    class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all"
+                    placeholder="例: 500g">
+            </div>
+
+            <!-- 外気温 -->
+            <div>
+                <label for="outsideTemp" class="block text-sm font-medium mb-2 text-coffee-300">外気温</label>
+                <input type="text" id="outsideTemp" name="outsideTemp"
+                    class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all"
+                    placeholder="例: 22℃">
+            </div>
+
+            <!-- ローストレベル -->
+            <div>
+                <label for="roastLevel" class="block text-sm font-medium mb-2 text-coffee-300">ローストレベル</label>
+                <select id="roastLevel" name="roastLevel"
+                    class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all">
+                    <option value="">選択してください</option>
+                    <option value="ライト">ライト</option>
+                    <option value="シナモン">シナモン</option>
+                    <option value="ミディアム">ミディアム</option>
+                    <option value="ハイ">ハイ</option>
+                    <option value="シティ">シティ</option>
+                    <option value="フルシティ">フルシティ</option>
+                    <option value="フレンチ">フレンチ</option>
+                    <option value="イタリアン">イタリアン</option>
+                </select>
+            </div>
+
+            <!-- タイマーセクション -->
+            <div class="space-y-4 glass-effect-light rounded-xl p-6 border border-coffee-700/50">
+                <h2 class="text-lg font-semibold text-coffee-300 border-b border-coffee-700/50 pb-2">タイマー</h2>
+
+                <!-- タイマー表示 -->
+                <div class="text-center mb-4">
+                    <div id="timerDisplay" class="text-7xl font-mono font-bold text-coffee-400 mb-6 tracking-wider"
+                        style="text-shadow: 2px 2px 8px rgba(0,0,0,0.5);">0:00</div>
+                    <div class="flex gap-3 justify-center">
+                        <button type="button" id="timerStartBtn"
+                            class="px-8 py-3 bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl btn-premium">
+                            開始
+                        </button>
+                        <button type="button" id="timerStopBtn"
+                            class="px-8 py-3 bg-gradient-to-r from-red-700 to-red-600 hover:from-red-600 hover:to-red-500 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl btn-premium hidden">
+                            停止
+                        </button>
+                        <button type="button" id="timerResetBtn"
+                            class="px-8 py-3 bg-gradient-to-r from-coffee-700 to-coffee-600 hover:from-coffee-600 hover:to-coffee-500 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl btn-premium">
+                            リセット
+                        </button>
+                    </div>
+                </div>
+
+                <!-- ハゼ記録ボタン -->
+                <div class="flex gap-3 justify-center flex-wrap">
+                    <button type="button" id="firstCrackBtn"
+                        class="px-6 py-3 bg-gradient-to-r from-orange-700 to-orange-600 hover:from-orange-600 hover:to-orange-500 text-white font-semibold rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg hover:shadow-xl btn-premium disabled:hover:shadow-lg">
+                        1ハゼ
+                    </button>
+                    <button type="button" id="secondCrackBtn"
+                        class="px-6 py-3 bg-gradient-to-r from-orange-700 to-orange-600 hover:from-orange-600 hover:to-orange-500 text-white font-semibold rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg hover:shadow-xl btn-premium disabled:hover:shadow-lg">
+                        2ハゼ
+                    </button>
+                    <button type="button" id="finishBtn"
+                        class="px-6 py-3 bg-gradient-to-r from-coffee-600 to-coffee-500 hover:from-coffee-500 hover:to-coffee-400 text-white font-semibold rounded-lg transition-all disabled:opacity-30 disabled:cursor-not-allowed shadow-lg hover:shadow-xl btn-premium disabled:hover:shadow-lg">
+                        完了
+                    </button>
+                </div>
+            </div>
+
+            <!-- 時間入力セクション -->
+            <div class="space-y-4">
+                <h2 class="text-lg font-semibold text-coffee-300 border-b border-coffee-700/50 pb-2">時間記録</h2>
+
+                <!-- 1ハゼ時間 -->
+                <div>
+                    <label for="firstCrack" class="block text-sm font-medium mb-2 text-coffee-300">1ハゼ時間(分:秒)</label>
+                    <input type="text" id="firstCrack" name="firstCrack"
+                        class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all text-center text-xl font-mono"
+                        placeholder="例: 5:30" inputmode="numeric" pattern="[0-9]{1,2}:[0-5][0-9]">
+                    <p class="text-xs text-coffee-500 mt-1">分:秒形式(例: 5:30)</p>
+                </div>
+
+                <!-- 2ハゼ時間 -->
+                <div>
+                    <label for="secondCrack" class="block text-sm font-medium mb-2 text-coffee-300">2ハゼ時間(分:秒)</label>
+                    <input type="text" id="secondCrack" name="secondCrack"
+                        class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all text-center text-xl font-mono"
+                        placeholder="例: 7:15" inputmode="numeric" pattern="[0-9]{1,2}:[0-5][0-9]">
+                    <p class="text-xs text-coffee-500 mt-1">分:秒形式(例: 7:15)</p>
+                </div>
+
+                <!-- 終了時間 -->
+                <div>
+                    <label for="totalTime" class="block text-sm font-medium mb-2 text-coffee-300">終了時間(分:秒)</label>
+                    <input type="text" id="totalTime" name="totalTime"
+                        class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all text-center text-xl font-mono"
+                        placeholder="例: 8:45" inputmode="numeric" pattern="[0-9]{1,2}:[0-5][0-9]">
+                    <p class="text-xs text-coffee-500 mt-1">分:秒形式(例: 8:45)</p>
+                </div>
+
+                <!-- DTR自動計算結果表示 -->
+                <div id="dtrResult" class="glass-effect-light border border-coffee-600/50 rounded-lg p-4 hidden">
+                    <div class="flex items-center justify-between">
+                        <span class="text-sm font-medium text-coffee-300">DTR (Development Time Ratio)</span>
+                        <span id="dtrValue" class="text-3xl font-bold text-coffee-400"
+                            style="text-shadow: 1px 1px 4px rgba(0,0,0,0.5);">0.0%</span>
+                    </div>
+                    <p class="text-xs text-coffee-500 mt-2">計算式: ((終了時間 - 1ハゼ時間) / 終了時間) × 100</p>
+                </div>
+            </div>
+
+            <!-- メモセクション -->
+            <div class="space-y-4">
+                <h2 class="text-lg font-semibold text-coffee-300 border-b border-coffee-700/50 pb-2">メモ</h2>
+
+                <!-- 焙煎メモ -->
+                <div>
+                    <label for="roastingMemo" class="block text-sm font-medium mb-2 text-coffee-300">焙煎メモ</label>
+                    <textarea id="roastingMemo" name="roastingMemo" rows="3"
+                        class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all resize-none"
+                        placeholder="焙煎中の気づきや温度、火力などの記録"></textarea>
+                </div>
+
+                <!-- テイスティングメモ -->
+                <div>
+                    <label for="tastingMemo" class="block text-sm font-medium mb-2 text-coffee-300">テイスティングメモ</label>
+                    <textarea id="tastingMemo" name="tastingMemo" rows="3"
+                        class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all resize-none"
+                        placeholder="味わい、香り、酸味、苦味などの記録"></textarea>
+                </div>
+
+                <!-- 総合メモ -->
+                <div>
+                    <label for="generalMemo" class="block text-sm font-medium mb-2 text-coffee-300">総合メモ</label>
+                    <textarea id="generalMemo" name="generalMemo" rows="3"
+                        class="w-full px-4 py-3 rounded-lg border border-coffee-700 bg-coffee-900/50 text-gray-100 focus:ring-2 focus:ring-coffee-500 focus:border-transparent transition-all resize-none"
+                        placeholder="総合的な感想や改善点など"></textarea>
+                </div>
+            </div>
+
+            <!-- 保存ボタン -->
+            <div class="flex gap-4">
+                <button type="submit" id="saveButton"
+                    class="flex-1 bg-gradient-to-r from-coffee-600 to-coffee-500 hover:from-coffee-500 hover:to-coffee-400 text-white font-semibold py-4 px-6 rounded-lg transition-all shadow-lg hover:shadow-2xl disabled:opacity-50 disabled:cursor-not-allowed btn-premium">
+                    <span id="saveButtonText">保存</span>
+                    <span id="saveButtonSpinner" class="hidden ml-2">送信中...</span>
+                </button>
+                <button type="button" id="clearButton"
+                    class="px-6 py-4 bg-gradient-to-r from-coffee-800 to-coffee-700 hover:from-coffee-700 hover:to-coffee-600 text-coffee-200 font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl btn-premium">
+                    クリア
+                </button>
+            </div>
+        </form>
+
+        <!-- データ管理セクション -->
+        <div class="mt-6 glass-effect rounded-2xl shadow-2xl p-6">
+            <h2 class="text-lg font-semibold mb-4 text-coffee-300">データ管理</h2>
+            <div class="flex gap-3 flex-wrap">
+                <button type="button" id="exportJsonBtn"
+                    class="flex-1 min-w-[140px] px-4 py-3 bg-gradient-to-r from-blue-700 to-blue-600 hover:from-blue-600 hover:to-blue-500 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl btn-premium">
+                    JSONエクスポート
+                </button>
+                <button type="button" id="exportCsvBtn"
+                    class="flex-1 min-w-[140px] px-4 py-3 bg-gradient-to-r from-green-700 to-green-600 hover:from-green-600 hover:to-green-500 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl btn-premium">
+                    CSVエクスポート
+                </button>
+                <button type="button" id="importBtn"
+                    class="flex-1 min-w-[140px] px-4 py-3 bg-gradient-to-r from-purple-700 to-purple-600 hover:from-purple-600 hover:to-purple-500 text-white font-semibold rounded-lg transition-all shadow-lg hover:shadow-xl btn-premium">
+                    データインポート
+                </button>
+                <input type="file" id="importFileInput" accept=".json" class="hidden">
+            </div>
+        </div>
+
+        <!-- 保存済みログ一覧 -->
+        <div id="logsSection" class="mt-8 glass-effect rounded-2xl shadow-2xl p-8">
+            <h2 class="text-xl font-semibold mb-4 text-coffee-300">保存済みログ</h2>
+            <div id="logsList" class="space-y-3">
+                <!-- ログが動的に追加されます -->
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // タイマー変数
+        let timerInterval = null;
+        let timerSeconds = 0;
+        let isTimerRunning = false;
+
+        // ページ読み込み完了後に実行
+        window.addEventListener('load', function () {
+            console.log('ページ読み込み完了');
+
+            // ダークモード初期化
+            initDarkMode();
+
+            // ログ読み込み
+            loadLogs();
+
+            // タイマー初期化
+            updateTimerDisplay();
+            disableTimerButtons();
+
+            // 加工法セレクトのイベント
+            document.getElementById('process').addEventListener('change', function (e) {
+                const customContainer = document.getElementById('customProcessContainer');
+                const customInput = document.getElementById('processOther');
+
+                if (e.target.value === 'その他') {
+                    customContainer.classList.remove('hidden');
+                    customInput.focus();
+                } else {
+                    customContainer.classList.add('hidden');
+                    customInput.value = '';
+                }
+            });
+
+            // 時間入力の設定
+            setupTimeInput(document.getElementById('firstCrack'));
+            setupTimeInput(document.getElementById('secondCrack'));
+            setupTimeInput(document.getElementById('totalTime'));
+
+            // タイマーボタンのイベントハンドラ
+            document.getElementById('timerStartBtn').addEventListener('click', function (e) {
+                e.preventDefault();
+                console.log('開始ボタンクリック');
+                startTimer();
+            });
+
+            document.getElementById('timerStopBtn').addEventListener('click', function (e) {
+                e.preventDefault();
+                console.log('停止ボタンクリック');
+                stopTimer();
+            });
+
+            document.getElementById('timerResetBtn').addEventListener('click', function (e) {
+                e.preventDefault();
+                console.log('リセットボタンクリック');
+                resetTimer();
+            });
+
+            document.getElementById('firstCrackBtn').addEventListener('click', function (e) {
+                e.preventDefault();
+                console.log('1ハゼボタンクリック');
+                if (isTimerRunning && timerSeconds > 0) {
+                    setTimeToInput(document.getElementById('firstCrack'), '1ハゼ');
+                }
+            });
+
+            document.getElementById('secondCrackBtn').addEventListener('click', function (e) {
+                e.preventDefault();
+                console.log('2ハゼボタンクリック');
+                if (isTimerRunning && timerSeconds > 0) {
+                    setTimeToInput(document.getElementById('secondCrack'), '2ハゼ');
+                }
+            });
+
+            document.getElementById('finishBtn').addEventListener('click', function (e) {
+                e.preventDefault();
+                console.log('完了ボタンクリック');
+                if (isTimerRunning && timerSeconds > 0) {
+                    setTimeToInput(document.getElementById('totalTime'), '終了');
+                    stopTimer();
+                }
+            });
+
+            // フォーム送信
+            document.getElementById('roastingForm').addEventListener('submit', handleFormSubmit);
+
+            // クリアボタン
+            document.getElementById('clearButton').addEventListener('click', function () {
+                if (confirm('入力内容をクリアしますか?')) {
+                    document.getElementById('roastingForm').reset();
+                    document.getElementById('dtrResult').classList.add('hidden');
+                    document.getElementById('customProcessContainer').classList.add('hidden');
+                    resetTimer();
+                }
+            });
+
+            // ダークモードトグル
+            document.getElementById('darkModeToggle').addEventListener('click', function () {
+                const isDark = document.documentElement.classList.toggle('dark');
+                localStorage.setItem('darkMode', isDark);
+            });
+
+            // エクスポート/インポートボタン
+            document.getElementById('exportJsonBtn').addEventListener('click', exportLogsAsJson);
+            document.getElementById('exportCsvBtn').addEventListener('click', exportLogsAsCsv);
+            document.getElementById('importBtn').addEventListener('click', function () {
+                document.getElementById('importFileInput').click();
+            });
+            document.getElementById('importFileInput').addEventListener('change', importLogsFromFile);
+
+            // Service Worker登録
+            if ('serviceWorker' in navigator) {
+                navigator.serviceWorker.register('service-worker.js')
+                    .then(function (registration) {
+                        console.log('Service Worker登録成功:', registration.scope);
+                    })
+                    .catch(function (error) {
+                        console.log('Service Worker登録失敗:', error);
+                    });
+            }
+        });
+
+        // ダークモード初期化
+        function initDarkMode() {
+            const isDark = localStorage.getItem('darkMode') === 'true' ||
+                (!localStorage.getItem('darkMode') && window.matchMedia('(prefers-color-scheme: dark)').matches);
+            document.documentElement.classList.toggle('dark', isDark);
+        }
+
+        // タイマーボタンを無効化
+        function disableTimerButtons() {
+            document.getElementById('firstCrackBtn').disabled = true;
+            document.getElementById('secondCrackBtn').disabled = true;
+            document.getElementById('finishBtn').disabled = true;
+        }
+
+        // タイマーボタンを有効化
+        function enableTimerButtons() {
+            document.getElementById('firstCrackBtn').disabled = false;
+            document.getElementById('secondCrackBtn').disabled = false;
+            document.getElementById('finishBtn').disabled = false;
+        }
+
+        // タイマー表示更新
+        function updateTimerDisplay() {
+            const minutes = Math.floor(timerSeconds / 60);
+            const seconds = timerSeconds % 60;
+            const display = document.getElementById('timerDisplay');
+            display.textContent = minutes + ':' + seconds.toString().padStart(2, '0');
+
+            // タイマー実行中はグロー効果を追加
+            if (isTimerRunning) {
+                display.classList.add('timer-active');
+            } else {
+                display.classList.remove('timer-active');
+            }
+        }
+
+        // タイマー開始
+        function startTimer() {
+            if (isTimerRunning) {
+                console.log('既に実行中');
+                return;
+            }
+
+            console.log('タイマー開始');
+            isTimerRunning = true;
+
+            document.getElementById('timerStartBtn').classList.add('hidden');
+            document.getElementById('timerStopBtn').classList.remove('hidden');
+            enableTimerButtons();
+
+            timerInterval = setInterval(function () {
+                timerSeconds++;
+                updateTimerDisplay();
+            }, 1000);
+
+            updateTimerDisplay();
+        }
+
+        // タイマー停止
+        function stopTimer() {
+            if (!isTimerRunning) {
+                console.log('実行されていません');
+                return;
+            }
+
+            console.log('タイマー停止');
+            isTimerRunning = false;
+
+            document.getElementById('timerStartBtn').classList.remove('hidden');
+            document.getElementById('timerStopBtn').classList.add('hidden');
+
+            if (timerInterval) {
+                clearInterval(timerInterval);
+                timerInterval = null;
+            }
+
+            updateTimerDisplay();
+        }
+
+        // タイマーリセット
+        function resetTimer() {
+            console.log('タイマーリセット');
+            stopTimer();
+            timerSeconds = 0;
+            updateTimerDisplay();
+            disableTimerButtons();
+        }
+
+        // 時間を入力欄にセット
+        function setTimeToInput(inputElement, label) {
+            const minutes = Math.floor(timerSeconds / 60);
+            const seconds = timerSeconds % 60;
+            const timeString = minutes + ':' + seconds.toString().padStart(2, '0');
+            inputElement.value = timeString;
+            updateDTRDisplay();
+            showToast(label + '時間を記録しました: ' + timeString, 'success');
+            console.log('時間記録:', timeString);
+        }
+
+        // 分:秒を秒に変換
+        function timeToSeconds(timeString) {
+            if (!timeString || !timeString.includes(':')) {
+                return null;
+            }
+            const parts = timeString.split(':');
+            const minutes = parseInt(parts[0], 10);
+            const seconds = parseInt(parts[1], 10);
+
+            if (isNaN(minutes) || isNaN(seconds) || seconds >= 60) {
+                return null;
+            }
+
+            return minutes * 60 + seconds;
+        }
+
+        // DTR計算 ((終了-1ハゼ)/終了)×100
+        function calculateDTR(firstCrackTime, totalTime) {
+            const firstCrackSeconds = timeToSeconds(firstCrackTime);
+            const totalSeconds = timeToSeconds(totalTime);
+
+            if (firstCrackSeconds === null || totalSeconds === null || totalSeconds === 0) {
+                return null;
+            }
+
+            if (firstCrackSeconds >= totalSeconds) {
+                return null;
+            }
+
+            // DTR = ((終了時間 - 1ハゼ時間) / 終了時間) × 100
+            const dtr = ((totalSeconds - firstCrackSeconds) / totalSeconds) * 100;
+            return Math.round(dtr * 10) / 10;
+        }
+
+        // DTR表示更新
+        function updateDTRDisplay() {
+            const firstCrack = document.getElementById('firstCrack').value.trim();
+            const totalTime = document.getElementById('totalTime').value.trim();
+
+            const dtr = calculateDTR(firstCrack, totalTime);
+
+            if (dtr !== null) {
+                document.getElementById('dtrValue').textContent = dtr + '%';
+                document.getElementById('dtrResult').classList.remove('hidden');
+            } else {
+                document.getElementById('dtrResult').classList.add('hidden');
+            }
+        }
+
+        // 時間入力の設定
+        function setupTimeInput(input) {
+            input.addEventListener('input', function (e) {
+                let value = e.target.value;
+                value = value.replace(/[^0-9:]/g, '');
+
+                const colonCount = (value.match(/:/g) || []).length;
+                if (colonCount > 1) {
+                    value = value.substring(0, value.lastIndexOf(':'));
+                }
+
+                if (value.length > 0 && !value.includes(':')) {
+                    if (value.length > 2) {
+                        const minutes = value.slice(0, -2);
+                        const seconds = value.slice(-2);
+                        if (parseInt(seconds) < 60) {
+                            value = minutes + ':' + seconds;
+                        }
+                    }
+                }
+
+                e.target.value = value;
+                updateDTRDisplay();
+            });
+
+            input.addEventListener('blur', function (e) {
+                let value = e.target.value.trim();
+
+                if (value && !value.includes(':')) {
+                    if (value.length <= 2) {
+                        value = '0:' + value.padStart(2, '0');
+                    } else {
+                        const minutes = value.slice(0, -2);
+                        const seconds = value.slice(-2);
+                        value = minutes + ':' + seconds;
+                    }
+                } else if (value.includes(':')) {
+                    const parts = value.split(':');
+                    if (parts.length === 2) {
+                        const minutes = parts[0] || '0';
+                        let seconds = parts[1] || '00';
+                        if (seconds.length === 1) {
+                            seconds = '0' + seconds;
+                        }
+                        if (parseInt(seconds) >= 60) {
+                            seconds = '59';
+                        }
+                        value = minutes + ':' + seconds;
+                    }
+                }
+
+                e.target.value = value;
+                updateDTRDisplay();
+            });
+        }
+
+        // トースト通知
+        function showToast(message, type) {
+            type = type || 'info';
+            const toast = document.createElement('div');
+            const bgColor = type === 'success' ? 'bg-gradient-to-r from-green-700 to-green-600' :
+                type === 'error' ? 'bg-gradient-to-r from-red-700 to-red-600' :
+                    'bg-gradient-to-r from-blue-700 to-blue-600';
+            toast.className = bgColor + ' text-white px-6 py-3 rounded-lg shadow-2xl flex items-center justify-between min-w-[300px] animate-slide-in';
+            toast.innerHTML = '<span>' + message + '</span><button class="ml-4 text-white hover:text-gray-200 text-xl font-bold" onclick="this.parentElement.remove()">×</button>';
+
+            document.getElementById('toastContainer').appendChild(toast);
+
+            setTimeout(function () {
+                if (toast.parentElement) {
+                    toast.style.animation = 'slide-out 0.3s ease-out';
+                    setTimeout(function () { toast.remove(); }, 300);
+                }
+            }, 3000);
+        }
+
+        // フォームデータ取得
+        function getFormData() {
+            const firstCrack = document.getElementById('firstCrack').value.trim();
+            const secondCrack = document.getElementById('secondCrack').value.trim();
+            const totalTime = document.getElementById('totalTime').value.trim();
+            const dtr = calculateDTR(firstCrack, totalTime);
+
+            const process = document.getElementById('process').value;
+            const processOther = document.getElementById('processOther').value.trim();
+
+            return {
+                date: new Date().toLocaleString('ja-JP'),
+                origin: document.getElementById('origin').value.trim(),
+                process: process,
+                processOther: processOther,
+                cropYear: document.getElementById('cropYear').value.trim(),
+                supplier: document.getElementById('supplier').value.trim(),
+                beanAmount: document.getElementById('beanAmount').value.trim(),
+                outsideTemp: document.getElementById('outsideTemp').value.trim(),
+                roastLevel: document.getElementById('roastLevel').value,
+                firstCrack: firstCrack,
+                secondCrack: secondCrack,
+                totalTime: totalTime,
+                dtr: dtr !== null ? dtr : null,
+                roastingMemo: document.getElementById('roastingMemo').value.trim(),
+                tastingMemo: document.getElementById('tastingMemo').value.trim(),
+                generalMemo: document.getElementById('generalMemo').value.trim()
+            };
+        }
+
+        // LocalStorage保存
+        function saveToLocalStorage(data) {
+            try {
+                const logs = JSON.parse(localStorage.getItem('roastingLogs') || '[]');
+                logs.unshift(data);
+                localStorage.setItem('roastingLogs', JSON.stringify(logs));
+                return true;
+            } catch (error) {
+                console.error('LocalStorage保存エラー:', error);
+                return false;
+            }
+        }
+
+        // フォーム送信処理
+        function handleFormSubmit(e) {
+            e.preventDefault();
+
+            const formData = getFormData();
+
+            // バリデーション
+            if (!formData.origin) {
+                showToast('生産地を入力してください', 'error');
+                return;
+            }
+
+            if (!formData.firstCrack || !formData.totalTime) {
+                showToast('1ハゼ時間と上り時間を入力してください', 'error');
+                return;
+            }
+
+            if (!formData.process) {
+                showToast('加工法を選択してください', 'error');
+                return;
+            }
+
+            if (formData.process === 'その他' && !formData.processOther) {
+                showToast('加工法（other）を入力してください', 'error');
+                return;
+            }
+
+            // ボタン無効化
+            const saveButton = document.getElementById('saveButton');
+            const saveButtonText = document.getElementById('saveButtonText');
+            const saveButtonSpinner = document.getElementById('saveButtonSpinner');
+
+            saveButton.disabled = true;
+            saveButtonText.textContent = '送信中';
+            saveButtonSpinner.classList.remove('hidden');
+
+            // ローカルストレージに保存
+            const localSaveSuccess = saveToLocalStorage(formData);
+
+            if (!localSaveSuccess) {
+                showToast('ローカル保存に失敗しました', 'error');
+                saveButton.disabled = false;
+                saveButtonText.textContent = '保存';
+                saveButtonSpinner.classList.add('hidden');
+                return;
+            }
+
+            // PWA版: LocalStorageのみ使用（Google Apps Script連携なし）
+            console.log('データ保存成功:', formData);
+            showToast('データを保存しました', 'success');
+
+            // フォームクリア
+            document.getElementById('roastingForm').reset();
+            document.getElementById('dtrResult').classList.add('hidden');
+            document.getElementById('customProcessContainer').classList.add('hidden');
+            resetTimer();
+
+            loadLogs();
+
+            saveButton.disabled = false;
+            saveButtonText.textContent = '保存';
+            saveButtonSpinner.classList.add('hidden');
+        }
+
+        // ログ読み込み
+        function loadLogs() {
+            try {
+                const logs = JSON.parse(localStorage.getItem('roastingLogs') || '[]');
+                const logsList = document.getElementById('logsList');
+
+                if (logs.length === 0) {
+                    logsList.innerHTML = '<p class="text-coffee-500 text-center py-4">保存されたログがありません</p>';
+                    return;
+                }
+
+                logsList.innerHTML = logs.map(function (log, index) {
+                    let html = '<div class="glass-effect-light rounded-lg p-5 border border-coffee-700/50 hover:border-coffee-600/70 transition-all">';
+                    html += '<div class="flex justify-between items-start mb-3">';
+                    html += '<div>';
+                    html += '<h3 class="font-semibold text-coffee-200 text-lg">' + (log.origin || '未設定') + '</h3>';
+                    html += '<p class="text-sm text-coffee-400">' + (log.process || '未設定') + ' | ' + (log.date || '') + '</p>';
+                    html += '</div>';
+                    html += '<button onclick="deleteLog(' + index + ')" class="text-red-400 hover:text-red-300 text-sm font-medium transition-colors">削除</button>';
+                    html += '</div>';
+                    html += '<div class="grid grid-cols-2 gap-3 text-sm mt-3">';
+                    html += '<div>';
+                    html += '<span class="text-coffee-400">1ハゼ:</span>';
+                    html += '<span class="font-mono ml-1 text-coffee-200 font-semibold">' + (log.firstCrack || '-') + '</span>';
+                    html += '</div>';
+                    if (log.secondCrack) {
+                        html += '<div>';
+                        html += '<span class="text-coffee-400">2ハゼ:</span>';
+                        html += '<span class="font-mono ml-1 text-coffee-200 font-semibold">' + log.secondCrack + '</span>';
+                        html += '</div>';
+                    }
+                    html += '<div class="' + (log.secondCrack ? '' : 'col-span-2') + '">';
+                    html += '<span class="text-coffee-400">終了:</span>';
+                    html += '<span class="font-mono ml-1 text-coffee-200 font-semibold">' + (log.totalTime || '-') + '</span>';
+                    html += '</div>';
+                    if (log.dtr !== null && log.dtr !== undefined) {
+                        html += '<div class="col-span-2">';
+                        html += '<span class="text-coffee-400">DTR:</span>';
+                        html += '<span class="font-bold text-coffee-300 ml-1 text-lg">' + log.dtr + '%</span>';
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                    if (log.roastingMemo || log.tastingMemo || log.generalMemo) {
+                        html += '<div class="mt-3 pt-3 border-t border-coffee-700/50 space-y-2">';
+                        if (log.roastingMemo) {
+                            html += '<div>';
+                            html += '<span class="text-xs font-semibold text-coffee-400">焙煎メモ:</span>';
+                            html += '<p class="text-sm text-coffee-300 mt-1">' + log.roastingMemo + '</p>';
+                            html += '</div>';
+                        }
+                        if (log.tastingMemo) {
+                            html += '<div>';
+                            html += '<span class="text-xs font-semibold text-coffee-400">テイスティングメモ:</span>';
+                            html += '<p class="text-sm text-coffee-300 mt-1">' + log.tastingMemo + '</p>';
+                            html += '</div>';
+                        }
+                        if (log.generalMemo) {
+                            html += '<div>';
+                            html += '<span class="text-xs font-semibold text-coffee-400">総合メモ:</span>';
+                            html += '<p class="text-sm text-coffee-300 mt-1">' + log.generalMemo + '</p>';
+                            html += '</div>';
+                        }
+                        html += '</div>';
+                    }
+                    html += '</div>';
+                    return html;
+                }).join('');
+            } catch (error) {
+                console.error('ログ読み込みエラー:', error);
+                document.getElementById('logsList').innerHTML = '<p class="text-red-400 text-center py-4">ログの読み込みに失敗しました</p>';
+            }
+        }
+
+        // ログ削除
+        function deleteLog(index) {
+            if (confirm('このログを削除しますか?')) {
+                try {
+                    const logs = JSON.parse(localStorage.getItem('roastingLogs') || '[]');
+                    logs.splice(index, 1);
+                    localStorage.setItem('roastingLogs', JSON.stringify(logs));
+                    loadLogs();
+                    showToast('ログを削除しました', 'success');
+                } catch (error) {
+                    console.error('ログ削除エラー:', error);
+                    showToast('ログの削除に失敗しました', 'error');
+                }
+            }
+        }
+
+        // JSONエクスポート
+        function exportLogsAsJson() {
+            try {
+                const logs = JSON.parse(localStorage.getItem('roastingLogs') || '[]');
+                if (logs.length === 0) {
+                    showToast('エクスポートするデータがありません', 'error');
+                    return;
+                }
+
+                const dataStr = JSON.stringify(logs, null, 2);
+                const dataBlob = new Blob([dataStr], { type: 'application/json' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'roasting_logs_' + new Date().toISOString().slice(0, 10) + '.json';
+                link.click();
+                URL.revokeObjectURL(url);
+
+                showToast('JSONファイルをダウンロードしました', 'success');
+            } catch (error) {
+                console.error('JSONエクスポートエラー:', error);
+                showToast('エクスポートに失敗しました', 'error');
+            }
+        }
+
+        // CSVエクスポート
+        function exportLogsAsCsv() {
+            try {
+                const logs = JSON.parse(localStorage.getItem('roastingLogs') || '[]');
+                if (logs.length === 0) {
+                    showToast('エクスポートするデータがありません', 'error');
+                    return;
+                }
+
+                // CSVヘッダー
+                const headers = ['焙煎日', '生産地', '加工法', '加工法（other）', 'クロップ年度', '仕入先', '投入量', '外気温', 'ローストレベル', '1ハゼ', '2ハゼ', '終了時間', 'DTR', '焙煎メモ', 'テイスティングメモ', '総合メモ'];
+                let csvContent = headers.join(',') + '\n';
+
+                // データ行
+                logs.forEach(function (log) {
+                    const row = [
+                        log.date || '',
+                        log.origin || '',
+                        log.process || '',
+                        log.processOther || '',
+                        log.cropYear || '',
+                        log.supplier || '',
+                        log.beanAmount || '',
+                        log.outsideTemp || '',
+                        log.roastLevel || '',
+                        log.firstCrack || '',
+                        log.secondCrack || '',
+                        log.totalTime || '',
+                        log.dtr !== null && log.dtr !== undefined ? log.dtr + '%' : '',
+                        log.roastingMemo || '',
+                        log.tastingMemo || '',
+                        log.generalMemo || ''
+                    ];
+                    // CSVエスケープ処理
+                    const escapedRow = row.map(function (field) {
+                        field = String(field).replace(/"/g, '""');
+                        if (field.includes(',') || field.includes('\n') || field.includes('"')) {
+                            field = '"' + field + '"';
+                        }
+                        return field;
+                    });
+                    csvContent += escapedRow.join(',') + '\n';
+                });
+
+                // BOM追加（Excelでの文字化け防止）
+                const bom = '\uFEFF';
+                const dataBlob = new Blob([bom + csvContent], { type: 'text/csv;charset=utf-8;' });
+                const url = URL.createObjectURL(dataBlob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = 'roasting_logs_' + new Date().toISOString().slice(0, 10) + '.csv';
+                link.click();
+                URL.revokeObjectURL(url);
+
+                showToast('CSVファイルをダウンロードしました', 'success');
+            } catch (error) {
+                console.error('CSVエクスポートエラー:', error);
+                showToast('エクスポートに失敗しました', 'error');
+            }
+        }
+
+        // データインポート
+        function importLogsFromFile(event) {
+            const file = event.target.files[0];
+            if (!file) {
+                return;
+            }
+
+            const reader = new FileReader();
+            reader.onload = function (e) {
+                try {
+                    const importedLogs = JSON.parse(e.target.result);
+                    if (!Array.isArray(importedLogs)) {
+                        throw new Error('無効なデータ形式です');
+                    }
+
+                    const currentLogs = JSON.parse(localStorage.getItem('roastingLogs') || '[]');
+                    const mergedLogs = [...importedLogs, ...currentLogs];
+                    localStorage.setItem('roastingLogs', JSON.stringify(mergedLogs));
+
+                    loadLogs();
+                    showToast('データをインポートしました（' + importedLogs.length + '件）', 'success');
+                } catch (error) {
+                    console.error('インポートエラー:', error);
+                    showToast('インポートに失敗しました: ' + error.message, 'error');
+                }
+            };
+            reader.readAsText(file);
+
+            // ファイル選択をリセット
+            event.target.value = '';
+        }
+    </script>
+</body>
+
+</html>
