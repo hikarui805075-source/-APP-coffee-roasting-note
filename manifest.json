@@ -3,7 +3,7 @@
   "short_name": "焙煎ログ",
   "description": "珈琲焙煎の記録と管理アプリ",
   "start_url": "./index.html",
-  "scope": "/",
+  "scope": "./",
   "display": "standalone",
   "background_color": "#0a0a0a",
   "theme_color": "#8b6f4e",
